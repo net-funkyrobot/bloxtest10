@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "440894321495",
+    "project_id": "net-startupworx-bloxtest10",
+    "storage_bucket": "net-startupworx-bloxtest10.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:440894321495:android:043e8a10ee7e57f5944412",
+        "android_client_info": {
+          "package_name": "net.startupworx.bloxtest10"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "440894321495-bnupd0fkih0frfnd6h5d5bg6je34fpa3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCh4Ki8csSKv4oYD9iqjKlTdASbVDN-MN8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "440894321495-bnupd0fkih0frfnd6h5d5bg6je34fpa3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "440894321495-809ve9p4ih6vtjh3gp9qcb5ci0v7e28e.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "net.startupworx.bloxtest10"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
