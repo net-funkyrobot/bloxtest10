@@ -1,0 +1,9 @@
+windows:
+  - name: flutter-development
+    root: ~/Documents/workspace/carpetwrong/workspace/bloxtest10
+    layout: even-horizontal
+    panes:
+      - commands:
+        - git status
+        focus: true
+      - flutter pub run build_runner watch --delete-conflicting-outputs

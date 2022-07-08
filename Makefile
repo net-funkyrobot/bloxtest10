@@ -69,19 +69,21 @@ lib/firebase_options.dart: | .stamps/infrastructure-setup.done
 	git add -A && git commit -m "Initial commit" && git push -u origin main
 
 # Libraries like Firestore require a higher iOS platform version than flutter create defaults to
---set-ios-platform:
+.stamps/prepare-podfile.done: | .stamps
 	sed -i "" -e "s/# platform :ios, '9.0'/platform :ios, '10.0'/g" ios/Podfile
+	@touch $@
 
 # Again Firestore requires a higher Android minimum SDK version than Flutter's default (21 instead of 16)
---set-android-min-sdk-version:
+.stamps/prepare-build-gradle.done: | .stamps
 	sed -i "" -e "s/ flutter\.minSdkVersion/ 21/g" android/app/build.gradle
+	@touch $@
 
 # Commit all the changes that the prepare target creates (stamp before commands are run so the stamp is included)
 .stamps/prepare-changes-commit.done.perm: | .stamps
 	@touch $@
 	git add -A && git commit -m "Add initial make prepare changes" && git push -u origin main
 
-.stamps/codebase-setup.done: | .git node_modules --pubspec.lock --build-runner-build lib/firebase_options.dart ios/Podfile --set-ios-platform --set-android-min-sdk-version .stamps/prepare-changes-commit.done.perm
+.stamps/codebase-setup.done: | .git node_modules --pubspec.lock --build-runner-build lib/firebase_options.dart ios/Podfile .stamps/prepare-podfile.done .stamps/prepare-build-gradle.done .stamps/prepare-changes-commit.done.perm
 	@touch $@
 
 prepare: | .stamps/codebase-setup.done
@@ -95,11 +97,11 @@ prepare: | .stamps/codebase-setup.done
 	firebase setup:emulators:firestore
 	@touch $@
 
-dev: | .stamps/firebase-emulators.created --pubspec.lock lib/firebase_options.dart
-	npx firebase emulators:start --only firestore,auth
+dev: | --pubspec.lock lib/firebase_options.dart
+	itermocil --here
 
-dev-build-runner: | --pubspec.lock
-	flutter pub run build_runner watch --delete-conflicting-outputs
+dev-emulators: | .stamps/firebase-use.done .stamps/firebase-emulators.created --pubspec.lock lib/firebase_options.dart
+	itermocil --here --layout itermocil_dev_emulators.yml
 
 
 # DEPLOY

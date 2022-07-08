@@ -1,0 +1,10 @@
+windows:
+  - name: flutter-development-emulators
+    root: ~/Documents/workspace/carpetwrong/workspace/bloxtest10
+    layout: main-vertical
+    panes:
+      - commands:
+        - git status
+        focus: true
+      - npx firebase emulators:start --only firestore,auth
+      - flutter pub run build_runner watch --delete-conflicting-outputs
