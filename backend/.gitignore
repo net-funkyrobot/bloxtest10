@@ -4,6 +4,7 @@
 *.pyc
 __pycache__
 db.sqlite3
+db_test.sqlite3
 media
 
 # Backup files
@@ -35,8 +36,9 @@ coverage.xml
 # pyenv 
 .python-version 
 
-# Environment variables
+# Environment variables and secrets
 .env
+firebase-admin-service-account.json
 
 # mypy 
 .mypy_cache/ 

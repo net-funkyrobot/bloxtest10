@@ -1,9 +1,10 @@
 windows:
   - name: backend-development
+    root: ~/Documents/workspace/carpetwrong/workspace/bloxtest10/backend
     layout: main-vertical
     panes:
-      - GOOGLE_CLOUD_PROJECT=net-startupworx-bloxtest10 python manage.py runserver
-      - 'cloud_sql_proxy -instances="net-startupworx-bloxtest10:europe-west1:net-startupworx-bloxtest10-postgres"=tcp:5432'
       - commands:
-        - git status
+          - git status
         focus: true
+      - sleep 3 && python manage.py runserver
+      - 'cloud_sql_proxy -instances="net-startupworx-bloxtest10:europe-west1:net-startupworx-bloxtest10-postgres"=tcp:5432'

@@ -8,6 +8,7 @@
 # GENERIC
 
 # Run pip install (both main and dev dependencies)
+.PHONY: | python-dependencies
 python-dependencies:
 	pip install -r requirements.txt && pip install -r requirements-dev.txt
 
@@ -19,9 +20,13 @@ python-dependencies:
 	gcloud components install cloud_sql_proxy --quiet
 	@touch $@
 
-.stamps/codebase-setup.done: | .stamps/gcloud-cloud-sql-proxy.installed
+firebase-admin-service-account.json:
+	gcloud secrets versions access latest --secret firebase_admin_service_account_key > firebase-admin-service-account.json
+
+.stamps/codebase-setup.done: | .stamps/gcloud-cloud-sql-proxy.installed firebase-admin-service-account.json
 	@touch $@
 
+.PHONY: | prepare
 prepare: | .stamps/codebase-setup.done
 	echo "Codebase setup completed"
 
@@ -61,23 +66,31 @@ prepare: | .stamps/codebase-setup.done
 	gcloud secrets add-iam-policy-binding backend_settings --member serviceAccount:net-startupworx-bloxtest10@appspot.gserviceaccount.com --role roles/secretmanager.secretAccessor --project net-startupworx-bloxtest10 --quiet
 	@touch $@
 
-.stamps/infrastructure-setup.done: | .stamps .stamps/gcloud-apis.enabled.perm .stamps/gcloud-cloud-sql-database-user.created.perm .stamps/gcloud-secrets.created.perm
+.stamps/gcloud-firebase-admin-service-account-key.created.perm: | .stamps
+	gcloud iam service-accounts keys create firebase-admin-service-account.json --iam-account=firebase-adminsdk-9og4c@net-startupworx-bloxtest10.iam.gserviceaccount.com --quiet --project net-startupworx-bloxtest10
+	gcloud secrets create firebase_admin_service_account_key --data-file firebase-admin-service-account.json --project net-startupworx-bloxtest10 --quiet
 	@touch $@
 
+.stamps/infrastructure-setup.done: | .stamps .stamps/gcloud-apis.enabled.perm .stamps/gcloud-cloud-sql-database-user.created.perm .stamps/gcloud-secrets.created.perm .stamps/gcloud-firebase-admin-service-account-key.created.perm
+	@touch $@
+
+.PHONY: | infrastructure
 infrastructure: | .stamps/infrastructure-setup.done
 	echo "Infrastructure created"
 
 
 # DEV
 
-.PHONY: copy-secrets
-copy-secrets:
+.PHONY: | secrets
+secrets:
+	echo "Getting latest environment settings and secrets from Google Cloud Secret Manager"
 	gcloud secrets versions access latest --secret backend_settings > .env
 
-.PHONY: update-secrets
-update-secrets:
+.PHONY: | deploy-secrets
+deploy-secrets:
 	gcloud secrets versions add backend_settings --data-file .env
 
 # Run Django devserver via Cloud SQL proxy
+.PHONY: | dev
 dev: | .stamps/codebase-setup.done python-dependencies
-	itermocil
+	itermocil --here
