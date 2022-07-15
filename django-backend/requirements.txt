@@ -1,5 +1,8 @@
 Django~=3.2.13
 django-environ~=0.9.0
 django-ninja~=0.18.0
+firebase-admin~=5.2.0
+google-cloud-firestore~=2.5.3
 google-cloud-secret-manager~=2.11.1
+mailchimp3~=3.0.17
 psycopg2~=2.9.3

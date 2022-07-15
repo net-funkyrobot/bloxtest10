@@ -60,13 +60,13 @@ else:
 # Application definition
 
 INSTALLED_APPS = [    # noqa: WPS407
-    'core',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'backend.core',
 ]
 
 MIDDLEWARE = [    # noqa: WPS407

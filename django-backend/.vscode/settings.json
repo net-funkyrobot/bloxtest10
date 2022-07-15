@@ -2,7 +2,8 @@
   "cSpell.diagnosticLevel": "Hint",
   "makefile.extensionOutputFolder": "./.vscode",
   "cSpell.words": [
-    "FIRESTORE"
+    "FIRESTORE",
+    "Mailchimp"
   ],
   "files.associations": {
     ".env": "shellscript",
