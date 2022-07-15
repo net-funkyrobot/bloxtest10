@@ -15,14 +15,6 @@ if os.path.isfile(env_file):
     # Use a local secret file, if provided
     env.read_env(env_file)
 
-elif os.getenv('TRAMPOLINE_CI', None):
-    # Create local settings if running with CI, for unit testing
-    placeholder = (
-        'SECRET_KEY=a\n'
-        'DATABASE_URL=sqlite://{db_path}'.format(db_path=os.path.join(BASE_DIR, 'db_test.sqlite3'))
-    )
-    env.read_env(io.StringIO(placeholder))
-
 elif os.environ.get('GOOGLE_CLOUD_PROJECT', None):
     # Pull secrets from Secret Manager
     project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
@@ -108,9 +100,8 @@ if os.getenv('USE_CLOUD_SQL_AUTH_PROXY', None):
     DATABASES['default']['HOST'] = '127.0.0.1'
     DATABASES['default']['PORT'] = 5432
 
-# Use a in-memory sqlite3 database when testing in CI systems or if flag set
-# TODO(glasnt) CHECK IF THIS IS REQUIRED because we're setting a val above
-if os.getenv('TRAMPOLINE_CI', None) or os.getenv('USE_LOCAL_SQLITE_DB', None):
+# Use a in-memory sqlite3 database when testing if flag set
+if os.getenv('USE_LOCAL_SQLITE_DB', None):
     DATABASES = {    # noqa: WPS407
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -119,7 +110,6 @@ if os.getenv('TRAMPOLINE_CI', None) or os.getenv('USE_LOCAL_SQLITE_DB', None):
     }
 
 # Password validation
-
 AUTH_PASSWORD_VALIDATORS = [    # noqa: WPS407
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',    # noqa: 501
@@ -136,7 +126,6 @@ AUTH_PASSWORD_VALIDATORS = [    # noqa: WPS407
 ]
 
 # Internationalization
-
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -144,12 +133,10 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-
 STATIC_ROOT = 'static'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = []    # noqa: WPS407
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
