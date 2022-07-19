@@ -10,9 +10,9 @@ from backend.core.schema import FirestoreUserProfile, ServiceResult
 
 
 class SyncNewUsers(Schema):
-    """
-    Sync user profile documents from Firestore and create user profiles in the
-    backend database.
+    """Sync user profile documents from Firestore.
+
+    This creates user profiles in the backend database.
     """
 
     sync_all: bool = False

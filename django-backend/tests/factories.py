@@ -8,7 +8,7 @@ factory.Faker._DEFAULT_LOCALE = "en_GB"
 
 class FirestoreUserProfileFactory(factory.Factory):
     email = factory.Sequence(
-        lambda n: "testing+userprofile{}@startupworx.net".format(n)
+        lambda n: "testing+userprofile{0}@startupworx.net".format(n)
     )
     created = factory.Faker(
         "date_time_between",
@@ -20,9 +20,9 @@ class FirestoreUserProfileFactory(factory.Factory):
 
 
 class UserProfileFactory(factory.django.DjangoModelFactory):
-    firebase_auth_user_id = factory.Sequence(lambda n: "{}".format(n))
+    firebase_auth_user_id = factory.Sequence(lambda n: "{0}".format(n))
     email = factory.Sequence(
-        lambda n: "testing+userprofile{}@startupworx.net".format(n)
+        lambda n: "testing+userprofile{0}@startupworx.net".format(n)
     )
 
     class Meta:

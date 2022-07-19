@@ -6,8 +6,9 @@ from mockfirestore import MockFirestore
 
 def patch_firestore(func):
     """
-    Decorator that patches the Firestore client with a mock client provided
-    by the mock-firestore package.
+    Patch the Firestore client.
+
+    Uses a mock client provided by the mock-firestore package.
 
     Args:
         func (_type_): _description_
