@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional
 
+from django.db import transaction
 from firebase_admin import firestore
 from ninja import Schema
-from pydantic import ValidationError
 
 from backend.core.models import UserProfile
-from backend.core.schema import FirestoreUserProfile, ServiceResult
+from backend.core.schema import FirestoreUserProfile
+from backend.core.services.base import ServiceResult, catch_service_errors
 
 
 class SyncNewUsers(Schema):
@@ -18,6 +19,7 @@ class SyncNewUsers(Schema):
     sync_all: bool = False
     sync_from: Optional[datetime]
 
+    @catch_service_errors
     def run(self) -> ServiceResult[None]:
         last_sync_timestamp = self.sync_from or (
             UserProfile.objects.values_list("created_at", flat=True)
@@ -36,16 +38,16 @@ class SyncNewUsers(Schema):
                 .stream()
             )
 
-        for user in fb_users:
-            try:
+        # Successfully sync all users or none at all
+        # This is so we can retry whole syncs after fixing an error and no
+        # user profiles fall down the cracks
+        with transaction.atomic():
+            for user in fb_users:
                 user_profile = FirestoreUserProfile(**user.to_dict())
-            except ValidationError:
-                # TODO: log this out here
-                continue
 
-            obj, created = UserProfile.objects.get_or_create(
-                firebase_auth_user_id=user.reference.id,
-                email=user_profile.email,
-            )
+                UserProfile.objects.get_or_create(
+                    firebase_auth_user_id=user.reference.id,
+                    email=user_profile.email,
+                )
 
         return ServiceResult(success=True)
