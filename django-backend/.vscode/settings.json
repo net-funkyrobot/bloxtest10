@@ -6,8 +6,9 @@
     "Mailchimp"
   ],
   "files.associations": {
-    ".env": "shellscript",
-    ".env*": "shellscript"
+    ".envrc": "shellscript",
+    ".secrets": "shellscript",
+    ".secrets-dist": "shellscript"
   },
   "python.formatting.provider": "black"
 }

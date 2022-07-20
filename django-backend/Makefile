@@ -84,11 +84,11 @@ infrastructure: | .stamps/infrastructure-setup.done
 .PHONY: | secrets
 secrets:
 	echo "Getting latest environment settings and secrets from Google Cloud Secret Manager"
-	gcloud secrets versions access latest --secret backend_settings > .env
+	gcloud secrets versions access latest --secret backend_settings > .secrets
 
 .PHONY: | deploy-secrets
 deploy-secrets:
-	gcloud secrets versions add backend_settings --data-file .env
+	gcloud secrets versions add backend_settings --data-file .secrets
 
 # Run Django devserver via Cloud SQL proxy
 .PHONY: | dev

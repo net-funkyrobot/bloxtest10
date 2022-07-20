@@ -37,7 +37,7 @@ coverage.xml
 .python-version 
 
 # Environment variables and secrets
-.env
+.secrets
 firebase-admin-service-account.json
 
 # mypy 
