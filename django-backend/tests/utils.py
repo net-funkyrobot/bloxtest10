@@ -18,7 +18,7 @@ def patch_firestore(func):
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):  # noqa: WPS430
+    def wrapper(*args, **kwargs):
         mock_firestore_client = MockFirestore()
         with patch("firebase_admin.firestore.client") as mock:
             mock.return_value = mock_firestore_client

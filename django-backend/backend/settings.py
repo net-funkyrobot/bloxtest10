@@ -63,15 +63,15 @@ if APPENGINE_URL:
     if not urlparse(APPENGINE_URL).scheme:
         APPENGINE_URL = f"https://{APPENGINE_URL}"
 
-    ALLOWED_HOSTS = [urlparse(APPENGINE_URL).netloc]  # noqa: WPS407
-    CSRF_TRUSTED_ORIGINS = [APPENGINE_URL]  # noqa: WPS407
+    ALLOWED_HOSTS = [urlparse(APPENGINE_URL).netloc]
+    CSRF_TRUSTED_ORIGINS = [APPENGINE_URL]
     SECURE_SSL_REDIRECT = True
 else:
-    ALLOWED_HOSTS = ["*"]  # noqa: WPS407
+    ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
-INSTALLED_APPS = [  # noqa: WPS407
+INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -81,7 +81,7 @@ INSTALLED_APPS = [  # noqa: WPS407
     "backend.core",
 ]
 
-MIDDLEWARE = [  # noqa: WPS407
+MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -93,7 +93,7 @@ MIDDLEWARE = [  # noqa: WPS407
 
 ROOT_URLCONF = "backend.urls"
 
-TEMPLATES = [  # noqa: WPS407
+TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
@@ -113,7 +113,7 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 # Database
 # Use django-environ to parse the connection string
-DATABASES = {"default": env.db()}  # noqa: WPS407
+DATABASES = {"default": env.db()}
 
 # If the flag as been set, configure to use proxy
 if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
@@ -122,7 +122,7 @@ if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
 
 # Use a in-memory sqlite3 database when testing if flag set
 if os.getenv("USE_LOCAL_SQLITE_DB", None):
-    DATABASES = {  # noqa: WPS407
+    DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
@@ -130,18 +130,18 @@ if os.getenv("USE_LOCAL_SQLITE_DB", None):
     }
 
 # Password validation
-AUTH_PASSWORD_VALIDATORS = [  # noqa: WPS407
+AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",  # noqa: 501
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",  # noqa: 501
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",  # noqa: 501
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",  # noqa: 501
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -155,7 +155,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = "static"
 STATIC_URL = "/static/"
-STATICFILES_DIRS = []  # noqa: WPS407
+STATICFILES_DIRS = []
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

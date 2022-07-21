@@ -4,7 +4,7 @@ from backend.core.models import UserProfile
 
 
 class UserProfileAdmin(admin.ModelAdmin):
-    pass    # noqa: WPS420 WPS604
+    pass
 
 
 admin.site.register(UserProfile, UserProfileAdmin)
