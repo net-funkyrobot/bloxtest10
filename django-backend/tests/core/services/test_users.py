@@ -23,7 +23,9 @@ def test_first_sync(fs_user_profile_factory):
     assert UserProfile.objects.count() == 0
 
     # SUT
-    SyncNewUsers().run()
+    result = SyncNewUsers().run()
+
+    assert result.success
 
     assert UserProfile.objects.count() == len(fs_users)
 

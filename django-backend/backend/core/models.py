@@ -31,6 +31,7 @@ class UserProfile(TimestampsMixin):
         max_length=FIRESTORE_STRING_MAX_LENGTH,
         unique=True,
     )
-    email = models.EmailField()
+    email = models.EmailField(db_index=True)
     subscribed_to_mailing_list = models.BooleanField(default=False)
     has_unsubscribed = models.BooleanField(default=False)
+    mailing_list_id = models.CharField(max_length=30, blank=True, null=True)

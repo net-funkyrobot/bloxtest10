@@ -5,5 +5,5 @@ email-validator~=1.2.1
 firebase-admin~=5.2.0
 google-cloud-firestore~=2.5.3
 google-cloud-secret-manager~=2.11.1
-mailchimp3~=3.0.17
+mailerlite-api-python~=0.10.0
 psycopg2~=2.9.3

@@ -9,3 +9,5 @@ mypy~=0.961
 pytest~=7.1.2
 pytest-django~=4.5.2
 safety~=1.10.3
+vcrpy~=4.2.0
+pytest-recording~=0.12.1

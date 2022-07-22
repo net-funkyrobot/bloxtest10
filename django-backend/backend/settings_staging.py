@@ -8,6 +8,7 @@ from backend.settings import (
     BASE_DIR,
     DEFAULT_AUTO_FIELD,
     INSTALLED_APPS,
+    MAILERLITE_API_TOKEN,
     MIDDLEWARE,
     LANGUAGE_CODE,
     ROOT_URLCONF,
@@ -35,3 +36,8 @@ DATABASES = {"default": env.db()}  # noqa: WPS407
 if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
     DATABASES["default"]["HOST"] = "127.0.0.1"
     DATABASES["default"]["PORT"] = 5432
+
+# Integrations
+
+# Set MAILERLITE_GROUP to "testing" so test contacts don't pollute the mailing list
+MAILERLITE_GROUP = "testing"
