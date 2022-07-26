@@ -12,4 +12,4 @@ def fs_user_profile_factory():
 @pytest.fixture
 def user_profile_factory():
     """Generate database user profile model instances."""
-    return factories.UserProfileFactory
+    return factories.MobileAppUserFactory

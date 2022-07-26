@@ -5,7 +5,7 @@ from django.db import transaction
 from firebase_admin import firestore
 from ninja import Schema
 
-from backend.core.models import UserProfile
+from backend.core.models import MobileAppUser
 from backend.core.schema import FirestoreUserProfile
 from backend.core.services.base import ServiceResult, catch_service_errors
 
@@ -22,7 +22,7 @@ class SyncNewUsers(Schema):
     @catch_service_errors
     def run(self) -> ServiceResult[None]:
         last_sync_timestamp = self.sync_from or (
-            UserProfile.objects.values_list("created_at", flat=True)
+            MobileAppUser.objects.values_list("created_at", flat=True)
             .order_by("-created_at")
             .first()
         )
@@ -45,8 +45,8 @@ class SyncNewUsers(Schema):
             for user in fb_users:
                 user_profile = FirestoreUserProfile(**user.to_dict())
 
-                UserProfile.objects.get_or_create(
-                    firebase_auth_user_id=user.reference.id,
+                MobileAppUser.objects.get_or_create(
+                    uid=user.reference.id,
                     email=user_profile.email,
                 )
 

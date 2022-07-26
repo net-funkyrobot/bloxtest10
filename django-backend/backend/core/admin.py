@@ -1,10 +1,7 @@
 from django.contrib import admin
 
-from backend.core.models import UserProfile
+from backend.core.models import GaeUser, MobileAppUser
 
 
-class UserProfileAdmin(admin.ModelAdmin):
-    pass
-
-
-admin.site.register(UserProfile, UserProfileAdmin)
+admin.site.register(GaeUser)
+admin.site.register(MobileAppUser)

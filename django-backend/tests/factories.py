@@ -19,15 +19,15 @@ class FirestoreUserProfileFactory(factory.Factory):
         model = FirestoreUserProfile
 
 
-class UserProfileFactory(factory.django.DjangoModelFactory):
-    firebase_auth_user_id = factory.Sequence(lambda n: "{0}".format(n))
+class MobileAppUserFactory(factory.django.DjangoModelFactory):
+    uid = factory.Sequence(lambda n: "{0}".format(n))
     email = factory.Sequence(
         lambda n: "testing+userprofile{0}@startupworx.net".format(n)
     )
 
     class Meta:
-        model = "core.UserProfile"
+        model = "core.MobileAppUser"
         django_get_or_create = (
-            "firebase_auth_user_id",
+            "uid",
             "email",
         )

@@ -86,7 +86,8 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Custom auth middleware that utilises AppEngine's User API
+    "backend.core.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -143,6 +144,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
+]
+
+# Use specialised Django User model that integrates with the AppEngine User API
+AUTH_USER_MODEL = "core.GaeUser"
+
+# Custom auth backend that utilises AppEngine's User API
+AUTHENTICATION_BACKENDS = [
+    "backend.core.backends.AppEngineUserAPIBackend",
 ]
 
 # Internationalization

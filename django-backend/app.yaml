@@ -1,0 +1,13 @@
+runtime: python39
+
+app_engine_apis: true
+instance_class: F1
+
+env_variables:
+  APPENGINE_URL: bloxtest10.uc.r.appspot.com
+
+handlers:
+  - url: /.*
+    script: auto
+    secure: always
+    login: required

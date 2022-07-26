@@ -4,7 +4,7 @@ import pytest
 from django.utils.timezone import datetime
 from firebase_admin import firestore
 
-from backend.core.models import UserProfile
+from backend.core.models import MobileAppUser
 from backend.core.services import SyncNewUsers
 from tests.utils import patch_firestore
 
@@ -20,14 +20,14 @@ def test_first_sync(fs_user_profile_factory):
     for user in fs_users:
         fs_client.collection("users").add(user.dict())
 
-    assert UserProfile.objects.count() == 0
+    assert MobileAppUser.objects.count() == 0
 
     # SUT
     result = SyncNewUsers().run()
 
     assert result.success
 
-    assert UserProfile.objects.count() == len(fs_users)
+    assert MobileAppUser.objects.count() == len(fs_users)
 
 
 @pytest.mark.django_db
@@ -58,10 +58,10 @@ def test_sync_from(user_profile_factory, fs_user_profile_factory):
     for user in new_fs_users:
         fs_client.collection("users").add(user.dict())
 
-    assert UserProfile.objects.count() == 1
+    assert MobileAppUser.objects.count() == 1
 
     # SUT
     SyncNewUsers().run()
 
     # We should have 5 users and not 6 (because one already exists)
-    assert UserProfile.objects.count() == len(fs_users)
+    assert MobileAppUser.objects.count() == len(fs_users)

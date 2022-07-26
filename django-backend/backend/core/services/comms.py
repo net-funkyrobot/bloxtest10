@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from mailerlite import MailerLiteApi
 
-from backend.core.models import UserProfile
+from backend.core.models import MobileAppUser
 from backend.core.services.base import ServiceResult, catch_service_errors
 
 _MAILERLITE_API_PAGE_SIZE = 50
@@ -25,8 +25,9 @@ class SyncMailingList:
             group_id = new_group.id
 
         # Query for new users, paginate, bulk subscribe users using client
-        new_user_emails = UserProfile.objects.filter(
-            subscribed_to_mailing_list=False
+        new_user_emails = MobileAppUser.objects.filter(
+            subscribed=False,
+            has_unsubscribed=False,
         ).values_list("email", flat=True)
 
         pages = Paginator(new_user_emails, _MAILERLITE_API_PAGE_SIZE)
@@ -43,9 +44,9 @@ class SyncMailingList:
 
             # Update flag and Mailerlite ID on models for successful subscribe
             for sub in new_subscribers:
-                UserProfile.objects.update(
+                MobileAppUser.objects.update(
                     email=sub.email,
-                    subscribed_to_mailing_list=True,
+                    susbcribed=True,
                     mailing_list_id=sub.id,
                 )
 
