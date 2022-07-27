@@ -1,104 +1,201 @@
-from functools import partial
+import logging
+import random
+import string
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.backends import ModelBackend
-from django.contrib.auth.models import BaseUserManager
-from django.core.exceptions import ImproperlyConfigured
-from django.db import transaction
-from django.db.utils import IntegrityError
-from django.utils import timezone
-from google.appengine.api import users
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    SuspiciousOperation,
+)
+from django.db.models import Q
+from django.db.transaction import atomic
+from google.auth.transport import requests
+from google.oauth2 import id_token
 
-from backend.core.models import GaeAbstractBaseUser
+from .constants import (
+    _GOOG_AUTHENTICATED_USER_EMAIL_HEADER,
+    _GOOG_AUTHENTICATED_USER_ID_HEADER,
+    _GOOG_JWT_ASSERTION_HEADER,
+    _IAP_AUDIENCE,
+)
+from .models import UserManager
+
+User = get_user_model()
 
 
-class BaseAppEngineUserAPIBackend(ModelBackend):
-    atomic = partial(transaction.atomic)
-    atomic_kwargs = {}
+def _generate_unused_username(ideal):
+    """
+    Check the database for a user with the specified username
+    and return either that ideal username, or an unused generated
+    one using the ideal username as a base
+    """
 
-    def authenticate(self, google_user=None):
-        """Handle authentication of a user from the given credentials.
+    if not User.objects.filter(username_lower=ideal.lower()).exists():
+        return ideal
 
-        Credentials must be a 'google_user' as returned by the App Engine
-        Users API.
-        """  # noqa: DAR401
-        if google_user is None:
-            return None
+    exists = True
 
-        User = get_user_model()  # noqa: N806
+    # We use random digits rather than anything sequential to avoid any kind of
+    # attack vector to get this loop stuck
+    while exists:
+        random_digits = "".join([random.choice(string.digits) for x in range(5)])
+        username = "%s-%s" % (ideal, random_digits)
+        exists = User.objects.filter(username_lower=username.lower).exists()
 
-        if not issubclass(User, GaeAbstractBaseUser):
-            raise ImproperlyConfigured(
-                "AppEngineUserAPIBackend requires AUTH_USER_MODEL to be a "
-                " subclass of djangae.contrib.auth.base.GaeAbstractBaseUser."
+    return username
+
+
+class IAPBackend:
+    @classmethod
+    def can_authenticate(cls, request):
+        return (
+            _GOOG_AUTHENTICATED_USER_EMAIL_HEADER in request.META
+            and _GOOG_AUTHENTICATED_USER_EMAIL_HEADER in request.META
+            and _GOOG_JWT_ASSERTION_HEADER in request.META
+        )
+
+    def authenticate(self, request, **kwargs):
+        error_partial = "An attacker might have tried to bypass IAP."
+        user_id = request.META.get(_GOOG_AUTHENTICATED_USER_ID_HEADER)
+        email = request.META.get(_GOOG_AUTHENTICATED_USER_EMAIL_HEADER)
+
+        # User not logged in to IAP
+        if not user_id or not email:
+            return
+
+        # All IDs provided should be namespaced
+        if ":" not in user_id or ":" not in email:
+            return
+
+        # Google tokens are namespaced with "auth.google.com:"
+        namespace, user_id = user_id.split(":", 1)
+        _, email = email.split(":", 1)
+
+        check_jwt = getattr(request, "_through_local_iap_middleware", True)
+
+        if check_jwt:
+            try:
+                audience = _get_IAP_audience_from_settings()
+            except AttributeError:
+                raise ImproperlyConfigured(
+                    "You must specify a %s in settings when using IAPBackend"
+                    % (_IAP_AUDIENCE,)
+                )
+            iap_jwt = request.META.get(_GOOG_JWT_ASSERTION_HEADER)
+
+            try:
+                signed_user_id, signed_user_email = _validate_iap_jwt(iap_jwt, audience)
+                signed_user_namespace, signed_user_id = signed_user_id.split(":", 1)
+            except ValueError as e:
+                raise SuspiciousOperation(
+                    "**ERROR: JWT validation error {}**\n{}".format(e, error_partial)
+                )
+
+            assert signed_user_id == user_id, (
+                f"IAP signed user id does not match {0}. ".format(
+                    _GOOG_AUTHENTICATED_USER_ID_HEADER
+                ),
+                error_partial,
+            )
+            assert signed_user_email == email, (
+                f"IAP signed user email does not match {0}. ".format(
+                    _GOOG_AUTHENTICATED_USER_EMAIL_HEADER
+                ),
+                error_partial,
             )
 
-        user_id = google_user.user_id()
-        email = BaseUserManager.normalize_email(
-            google_user.email()
-        )  # Normalizes the domain only.
+        email = UserManager.normalize_email(email)
+        assert email
 
-        try:
-            # User exists and we can bail immediately
-            user = User.objects.get(username=user_id)
-            return user
-        except User.DoesNotExist:
-            pass
+        username = email.split("@", 1)[0]
 
-        user_is_admin = users.is_current_user_admin()
+        with atomic():
+            # Look for a user, either by ID, or email
+            user = User.objects.filter(google_iap_id=user_id).first()
+            if not user:
+                # We explicitly don't do an OR query here, because we only want
+                # to search by email if the user doesn't exist by ID. ID takes
+                # precendence.
+                user = User.objects.filter(
+                    Q(email_lower=email.lower()) | Q(email=email)
+                ).first()
 
-        try:
-            # Users that existed before the introduction of the `email_lower`
-            # field will not have that field, but will most likely have a lower
-            # case email address because we used to lower case the email field
-            existing_user = User.objects.get(email_lower=email.lower())
-        except User.DoesNotExist:
-            if not user_is_admin:
-                # User doesn't exist, is not an admin and we aren't going to
-                # create one.
-                return None
+                if user and user.google_iap_id:
+                    logging.warning(
+                        "Found an existing user by email (%s) who had a different "
+                        "IAP user ID (%s != %s). This seems like a bug.",
+                        email,
+                        user.google_iap_id,
+                        user_id,
+                    )
 
-            existing_user = None
+                    # We don't use this to avoid accidentally "stealing" another
+                    # user
+                    user = None
 
-        # OK. We will grant access. We may need to update an existing user, or
-        # create a new one, or both.
-        #
-        # Those 3 scenarios are:
-        # 1. A User object has been created for this user, but that they have
-        # not logged in yet. In this case we fetch the User object by email,
-        # and then update it with the Google User ID.
-        #
-        # 2. A User object exists for this email address but belonging to a
-        # different Google account. This generally only happens when the email
-        # address of a Google Apps account has been signed up as a Google
-        # account and then the apps account itself has actually become a Google
-        # account. This is possible but very unlikely.
-        #
-        # 3. There is no User object relating to this user whatsoever.
+            if user:
+                # So we previously had a user sign in by email, but not
+                # via IAP, so we should set that ID
+                if not user.google_iap_id:
+                    user.google_iap_id = user_id
+                    user.google_iap_namespace = namespace
+                else:
+                    # Should be caught above if this isn't the case
+                    assert user.google_iap_id == user_id
 
-        if existing_user:
-            if existing_user.username is None:
-                # We can use the existing user for this new login.
-                existing_user.username = user_id
-                existing_user.email = email
-                existing_user.last_login = timezone.now()
-                existing_user.save()
+                # Update the email as it might have changed or perhaps
+                # this user was added through some other means and the
+                # sensitivity of the email differs etc.
+                user.email = email
 
-                return existing_user
+                # If the user doesn't currently have a password, it could
+                # mean that this backend has just been enabled on existing
+                # data that uses some other authentication system (e.g. the
+                # App Engine Users API) - for safety we make sure that an
+                # unusable password is set.
+                if not user.password:
+                    user.set_unusable_password()
+
+                # Note we don't update the username, as that may have
+                # been overridden by something post-creation
+                user.save()
             else:
-                # We need to update the existing user and create a new one.
-                with self.atomic(**self.atomic_kwargs):
-                    existing_user = User.objects.get(pk=existing_user.pk)
-                    existing_user.email = ""
-                    existing_user.save()
+                with atomic():
+                    # First time we've seen this user
+                    user = User.objects.create(
+                        google_iap_id=user_id,
+                        google_iap_namespace=namespace,
+                        email=email,
+                        username=_generate_unused_username(username),
+                    )
+                    user.set_unusable_password()
+                    user.save()
 
-                    return User.objects.create_user(user_id, email=email)
-        else:
-            # Create a new user, but account for another thread having created
-            # it already in a race condition scenario.
-            # Our logic cannot be in a transaction, so we have to just catch
-            # this.
-            try:
-                return User.objects.create_user(user_id, email=email)
-            except IntegrityError:
-                return User.objects.get(username=user_id)
+        return user
+
+
+def _validate_iap_jwt(iap_jwt, expected_audience):
+    """Validate an IAP JWT.
+
+    Args:
+      iap_jwt: The contents of the X-Goog-IAP-JWT-Assertion header.
+      expected_audience: The Signed Header JWT audience. See
+          https://cloud.google.com/iap/docs/signed-headers-howto
+          for details on how to get this value.
+
+    Returns:
+      (user_id, user_email).
+    """
+
+    decoded_jwt = id_token.verify_token(
+        iap_jwt,
+        requests.Request(),
+        audience=expected_audience,
+        certs_url="https://www.gstatic.com/iap/verify/public_key",
+    )
+    return (decoded_jwt["sub"], decoded_jwt["email"])
+
+
+def _get_IAP_audience_from_settings():
+    return getattr(settings, _IAP_AUDIENCE)

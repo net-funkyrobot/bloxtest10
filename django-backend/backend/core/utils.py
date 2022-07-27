@@ -1,13 +1,31 @@
-import re
+import collections
+import functools
 
-from django.core.exceptions import ValidationError
 
+class memoized(object):
+    def __init__(self, func, *args):
+        self.func = func
+        self.cache = {}
+        self.args = args
 
-def validate_google_user_id(value):
-    """Validate the given value is either empty, None, or 21 digits.
+    def __call__(self, *args):
+        args = self.args or args
+        if not isinstance(args, collections.Hashable):
+            # uncacheable. a list, for instance.
+            # better to not cache than blow up.
+            return self.func(*args)
 
-    Raises:
-        ValidationError: if Google user ID is invalid.
-    """
-    if value and not re.match(r"^\d{21}$", value):
-        raise ValidationError("Google user ID should be 21 digits.")
+        if args in self.cache:
+            return self.cache[args]
+        else:
+            value = self.func(*args)
+            self.cache[args] = value
+            return value
+
+    def __repr__(self):
+        """Return the function's docstring."""
+        return self.func.__doc__
+
+    def __get__(self, obj, objtype):
+        """Support instance methods."""
+        return functools.partial(self.__call__, obj)
