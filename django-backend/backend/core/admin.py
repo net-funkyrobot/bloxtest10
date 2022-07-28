@@ -1,7 +1,6 @@
 from django.contrib import admin
 
-from backend.core.models import BackendUser, MobileAppUser
+from backend.core.models import MobileAppUser
 
 
-admin.site.register(BackendUser)
 admin.site.register(MobileAppUser)

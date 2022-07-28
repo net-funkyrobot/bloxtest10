@@ -5,6 +5,11 @@ from urllib.parse import urlparse
 import environ
 from google.cloud import secretmanager
 
+from djangae.environment import project_id
+
+# Include Djangae settings
+from djangae.settings_base import *  # noqa: F401, F403
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -78,17 +83,22 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "djangae",
+    "djangae.tasks",
+    "djangae.contrib.googleauth",
+    "djangae.contrib.security",
     "backend.core",
 ]
 
 MIDDLEWARE = [
+    # "djangae.contrib.security.middleware.AppEngineSecurityMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    # Custom auth middleware that utilises AppEngine's User API
-    "backend.core.middleware.AuthenticationMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Djangae auth middleware that utilises Google Cloud IAP
+    "djangae.contrib.googleauth.middleware.AuthenticationMiddleware",
+    # "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -115,21 +125,19 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 # Database
 # Use django-environ to parse the connection string
-DATABASES = {"default": env.db()}
 
-# If the flag as been set, configure to use proxy
-if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
-    DATABASES["default"]["HOST"] = "127.0.0.1"
-    DATABASES["default"]["PORT"] = 5432
+DATASTORE_INDEX_YAML = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "dsindex.yaml",
+)
 
-# Use a in-memory sqlite3 database when testing if flag set
-if os.getenv("USE_LOCAL_SQLITE_DB", None):
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "gcloudc.db.backends.datastore",
+        "PROJECT": project_id(),
+        "INDEXES_FILE": DATASTORE_INDEX_YAML,
     }
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -147,13 +155,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Use specialised Django User model that integrates with the AppEngine User API
-AUTH_USER_MODEL = "core.BackendUser"
-
 # Custom auth backend that utilises AppEngine's User API
 AUTHENTICATION_BACKENDS = [
-    "backend.core.backends.IAPBackend",
+    "djangae.contrib.googleauth.backends.iap.IAPBackend",
 ]
+
+# Use specialised Django User model that integrates with the AppEngine User API
+AUTH_USER_MODEL = "core.BackendUser"
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
@@ -163,8 +171,8 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_ROOT = "static"
 STATIC_URL = "/static/"
+STATIC_ROOT = "static"
 STATICFILES_DIRS = []
 
 # Default primary key field type
