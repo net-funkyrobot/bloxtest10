@@ -47,7 +47,7 @@ prepare: | .stamps/codebase-setup.done
 
 # Create Postgres database on new instance
 # TODO: param here
-.stamps/gcloud-cloud-sql-database.created.perm: | .stamps .stamps/gcloud-cloud-sql-instance.created.perm .stamps/gcloud-cloud-sql-instance.created.perm
+.stamps/gcloud-cloud-sql-database.created.perm: | .stamps .stamps/gcloud-cloud-sql-instance.created.perm
 	gcloud sql databases create bloxtest10 --instance net-startupworx-bloxtest10-postgres --project net-startupworx-bloxtest10 --quiet
 	@touch $@
 
