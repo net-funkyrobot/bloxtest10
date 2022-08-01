@@ -8,7 +8,8 @@
   "files.associations": {
     ".envrc": "shellscript",
     ".secrets": "shellscript",
-    ".secrets-dist": "shellscript"
+    ".secrets-dist": "shellscript",
+    ".gcloudignore": "shellscript"
   },
   "python.formatting.provider": "black"
 }
