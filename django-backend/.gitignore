@@ -54,3 +54,6 @@ firebase-admin-service-account.json
 # Makefile .stamps
 .stamps/*
 !.stamps/*.perm
+
+# Django collectstatic directory
+static/

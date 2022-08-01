@@ -10,3 +10,8 @@
 
 # Makefile .stamps
 .stamps/*
+
+# Local dev files
+manage.py
+requirements-dev.txt
+.env
