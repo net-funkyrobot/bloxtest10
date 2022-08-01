@@ -8,6 +8,15 @@ from google.cloud import secretmanager
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# On AppEngine this env variable should be set, locally this should be set in .envrc
+GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", None)
+if not GOOGLE_CLOUD_PROJECT:
+    raise Exception("No GOOGLE_CLOUD_PROJECT env var detected. Cannot continue.")
+
+
+def is_remote_environment() -> bool:
+    return "GAE_ENV" in os.environ
+
 
 def get_secrets() -> environ.Env:
     """Get codebase secrets.
@@ -28,9 +37,9 @@ def get_secrets() -> environ.Env:
         # Use a local secret file, if provided
         env.read_env(env_file)
 
-    elif os.environ.get("GOOGLE_CLOUD_PROJECT", None):
+    elif GOOGLE_CLOUD_PROJECT:
         # Pull secrets from Secret Manager
-        project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+        project_id = GOOGLE_CLOUD_PROJECT
 
         client = secretmanager.SecretManagerServiceClient()
         settings_name = os.environ.get("SETTINGS_NAME", "backend_settings")
@@ -82,15 +91,28 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django_structlog.middlewares.RequestMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    # Custom auth middleware that utilises AppEngine's User API
-    "backend.core.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# If we're connecting to production locally use the Django auth middleware,
+# otherwise use GaeAuthenticationMiddleware that utilises the AppEngine User API
+if is_remote_environment():
+    MIDDLEWARE = [
+        *MIDDLEWARE,
+        "backend.core.middleware.GaeAuthenticationMiddleware",
+    ]
+else:
+    MIDDLEWARE = [
+        *MIDDLEWARE,
+        "django.contrib.auth.middleware.AuthenticationMiddleware",
+    ]
+
 
 ROOT_URLCONF = "backend.urls"
 
@@ -147,11 +169,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Use specialised Django User model that integrates with the AppEngine User API
-AUTH_USER_MODEL = "core.GaeUser"
+AUTH_USER_MODEL = "core.BackendUser"
 
 # Custom auth backend that utilises AppEngine's User API
 AUTHENTICATION_BACKENDS = [
     "backend.core.backends.AppEngineUserAPIBackend",
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 # Internationalization
@@ -162,7 +185,7 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_ROOT = "static"
+STATIC_ROOT = os.path.abspath(os.path.join(BASE_DIR, "static"))
 STATIC_URL = "/static/"
 STATICFILES_DIRS = []
 

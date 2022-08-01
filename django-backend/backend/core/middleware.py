@@ -6,14 +6,14 @@ from django.contrib.auth import (
     login,
     logout,
 )
-from django.contrib.auth.middleware import AuthenticationMiddleware as DjangoMiddleware
+from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.contrib.auth.models import AnonymousUser, BaseUserManager
 from google.appengine.api import users
 
-from backend.core.backends import BaseAppEngineUserAPIBackend
+from backend.core.backends import AppEngineUserAPIBackend
 
 
-class AuthenticationMiddleware(DjangoMiddleware):
+class GaeAuthenticationMiddleware(AuthenticationMiddleware):
     def process_request(self, request):
         django_user = get_user(request)
         google_user = users.get_current_user()
@@ -23,7 +23,7 @@ class AuthenticationMiddleware(DjangoMiddleware):
         if django_user.is_authenticated:
             backend_str = request.session.get(BACKEND_SESSION_KEY)
             if (not backend_str) or not isinstance(
-                load_backend(backend_str), BaseAppEngineUserAPIBackend
+                load_backend(backend_str), AppEngineUserAPIBackend
             ):
                 request.user = django_user
                 return
@@ -31,19 +31,20 @@ class AuthenticationMiddleware(DjangoMiddleware):
         if django_user.is_anonymous and google_user:
             # If there is a google user, but we are anonymous, log in!
             # Note that a Django user must already exist or have been
-            # pre-created for this google user. Unless they're an admin on the
-            # AppEngine project.
-            django_user = authenticate(google_user=google_user) or AnonymousUser()
+            # pre-created for this google user.
+            django_user = (
+                authenticate(request, google_user=google_user) or AnonymousUser()
+            )
             if django_user.is_authenticated:
                 login(request, django_user)
 
         if django_user.is_authenticated:
             if not google_user:
-                # If we are logged in with django, but not longer logged in
+                # If we are logged in with django, but no longer logged in
                 # with Google then log out
                 logout(request)
                 django_user = AnonymousUser()
-            elif django_user.username != google_user.user_id():
+            elif django_user.google_user_id != google_user.user_id():
                 # If the Google user changed, we need to log in with the new one
                 logout(request)
                 django_user = authenticate(google_user=google_user) or AnonymousUser()
