@@ -1,5 +1,8 @@
-import google.appengine.api
+import os
 
 from backend.wsgi import application
+from google.appengine.api import wrap_wsgi_app
 
-app = google.appengine.api.wrap_wsgi_app(application)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
+
+app = wrap_wsgi_app(application)
