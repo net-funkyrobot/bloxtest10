@@ -1,6 +1,6 @@
 windows:
   - name: backend-development
-    root: ~/Documents/workspace/carpetwrong/workspace/bloxtest10/backend
+    root: ~/Documents/workspace/carpetwrong/workspace/bloxtest10/django-backend
     layout: main-vertical
     panes:
       - commands:
