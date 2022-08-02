@@ -14,6 +14,7 @@ from backend.settings import (
     MAILERLITE_API_TOKEN,
     MIDDLEWARE,
     LANGUAGE_CODE,
+    LOGGING,
     ROOT_URLCONF,
     SECRET_KEY,
     STATIC_ROOT,

@@ -2,8 +2,15 @@ import io
 import os
 from urllib.parse import urlparse
 
+from django.dispatch import receiver
+
+from django_structlog.processors import inject_context_dict
+from django_structlog.signals import bind_extra_request_metadata
 import environ
 from google.cloud import secretmanager
+
+import structlog
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -192,6 +199,109 @@ STATICFILES_DIRS = []
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Logging setup
+
+
+def _transform_for_gcloud_logging(logger, log_method, event_dict):
+    # Rename 'event' to 'message'
+    event_dict["message"] = event_dict.get("event")
+    del event_dict["event"]
+
+    # Rename 'level' to 'severity'
+    event_dict["severity"] = event_dict.get("level")
+    del event_dict["level"]
+
+    # Map severity levels to GCloud versions and make uppercase
+    if event_dict["severity"].lower() == "notset":
+        event_dict["severity"] = "debug"
+    event_dict["severity"] = event_dict["severity"].upper()
+
+    return event_dict
+
+
+_shared_processors = [
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.add_logger_name,
+    structlog.processors.TimeStamper(fmt="iso"),
+    structlog.stdlib.PositionalArgumentsFormatter(),
+]
+if is_remote_environment():
+    # Transform keys and values to work with Google Cloud Logging
+    _shared_processors.append(_transform_for_gcloud_logging)
+
+_builtin_processors = [
+    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+    # Use JSON formatting on remote, console on local development
+    structlog.processors.JSONRenderer()
+    if is_remote_environment()
+    else structlog.dev.ConsoleRenderer(colors=True),
+]
+
+_builtin_pre_chain = [inject_context_dict, *_shared_processors]
+
+_structlog_processors = [
+    structlog.stdlib.filter_by_level,
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.UnicodeDecoder(),
+    *_shared_processors,
+]
+if is_remote_environment():
+    # Transform keys and values to work with Google Cloud Logging
+    _structlog_processors.append(structlog.processors.format_exc_info)
+# Wrap for builtin logging as very last processor
+_structlog_processors.append(structlog.stdlib.ProcessorFormatter.wrap_for_formatter)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json_formatter": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processors": _builtin_processors,
+            "foreign_pre_chain": _builtin_pre_chain,
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json_formatter",
+        },
+    },
+    "loggers": {
+        "root": {
+            "handlers": ["console"],
+            "level": "WARNING",
+        },
+    },
+}
+
+structlog.configure(
+    processors=_structlog_processors,
+    context_class=structlog.threadlocal.wrap_dict(dict),
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+
+@receiver(bind_extra_request_metadata)
+def bind_appengine_trace_context_id(request, logger, **kwargs):
+    trace_header = request.headers.get("X-Cloud-Trace-Context", None)
+
+    project_id = GOOGLE_CLOUD_PROJECT
+
+    if project_id and trace_header:
+        logger.bind(
+            **{
+                "logging.googleapis.com/trace": "projects/{0}/traces/{1}".format(
+                    project_id,
+                    trace_header.split("/")[0],
+                ),
+            },
+        )
+
 
 # Integrations
 
