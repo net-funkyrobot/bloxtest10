@@ -6,14 +6,14 @@ from django.contrib.auth import (
     login,
     logout,
 )
-from django.contrib.auth.middleware import AuthenticationMiddleware
+from django.contrib.auth.middleware import AuthenticationMiddleware as DjangoMiddleware
 from django.contrib.auth.models import AnonymousUser, BaseUserManager
 from google.appengine.api import users
 
 from backend.core.backends import AppEngineUserAPIBackend
 
 
-class GaeAuthenticationMiddleware(AuthenticationMiddleware):
+class GaeAuthenticationMiddleware(DjangoMiddleware):
     def process_request(self, request):
         django_user = get_user(request)
         google_user = users.get_current_user()
