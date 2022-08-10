@@ -1,53 +1,11 @@
-import re
-
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
 )
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-
-FIRESTORE_STRING_MAX_LENGTH = 128
-
-
-class TimestampsMixin(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    class Meta:
-        abstract = True
-
-
-class MobileAppUser(TimestampsMixin):
-    uid = models.CharField(
-        max_length=FIRESTORE_STRING_MAX_LENGTH,
-        unique=True,
-        help_text="Firebase Auth User ID",
-    )
-    email = models.EmailField(db_index=True)
-    subscribed = models.BooleanField(
-        default=False,
-        help_text="Marks if the user has been subscribed to the mailing list",
-    )
-    has_unsubscribed = models.BooleanField(
-        default=False,
-        help_text="Marks if the user has unsubscribed themselves to the mailing "
-        "list (we shouldn't subsequently re-add them).",
-    )
-    mailing_list_id = models.CharField(max_length=30, blank=True, null=True)
-
-
-def _validate_google_user_id(value):
-    """Validate the given value is either empty, None, or 21 digits.
-
-    Raises:
-        ValidationError: if Google user ID is invalid.
-    """
-    if value and not re.match(r"^\d{21}$", value):
-        raise ValidationError("Google user ID should be 21 digits.")
 
 
 class UserManager(BaseUserManager):
@@ -93,7 +51,6 @@ class GaeAbstractBaseUser(AbstractBaseUser):
         default=None,
         null=True,
         blank=True,
-        validators=[_validate_google_user_id],
     )
 
     first_name = models.CharField(_("first name"), max_length=30, blank=True)
