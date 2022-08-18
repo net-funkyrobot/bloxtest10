@@ -11,5 +11,15 @@
     ".secrets-dist": "shellscript",
     ".gcloudignore": "shellscript"
   },
-  "python.formatting.provider": "black"
+  "python.linting.mypyEnabled": true,
+  "python.formatting.provider": "black",
+  "python.sortImports.args": [
+    "--profile",
+    "black"
+  ],
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": true
+    }
+  }
 }
