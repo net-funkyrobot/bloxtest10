@@ -2,15 +2,12 @@ import io
 import os
 from urllib.parse import urlparse
 
+import environ
+import structlog
 from django.dispatch import receiver
-
 from django_structlog.processors import inject_context_dict
 from django_structlog.signals import bind_extra_request_metadata
-import environ
 from google.cloud import secretmanager
-
-import structlog
-
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,8 +18,7 @@ if not GOOGLE_CLOUD_PROJECT:
     raise Exception("No GOOGLE_CLOUD_PROJECT env var detected. Cannot continue.")
 
 
-def is_remote_environment() -> bool:
-    return "GAE_ENV" in os.environ
+REMOTE_ENVIRONMENT = "GAE_ENV" in os.environ and os.environ["GAE_ENV"] != "standard"
 
 
 def get_secrets() -> environ.Env:
@@ -109,7 +105,7 @@ MIDDLEWARE = [
 
 # If we're connecting to production locally use the Django auth middleware,
 # otherwise use GaeAuthenticationMiddleware that utilises the AppEngine User API
-if is_remote_environment():
+if REMOTE_ENVIRONMENT:
     MIDDLEWARE = [
         *MIDDLEWARE,
         "backend.core.middleware.GaeAuthenticationMiddleware",
@@ -227,7 +223,7 @@ _shared_processors = [
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.stdlib.PositionalArgumentsFormatter(),
 ]
-if is_remote_environment():
+if REMOTE_ENVIRONMENT:
     # Transform keys and values to work with Google Cloud Logging
     _shared_processors.append(_transform_for_gcloud_logging)
 
@@ -235,7 +231,7 @@ _builtin_processors = [
     structlog.stdlib.ProcessorFormatter.remove_processors_meta,
     # Use JSON formatting on remote, console on local development
     structlog.processors.JSONRenderer()
-    if is_remote_environment()
+    if REMOTE_ENVIRONMENT
     else structlog.dev.ConsoleRenderer(colors=True),
 ]
 
@@ -247,7 +243,7 @@ _structlog_processors = [
     structlog.processors.UnicodeDecoder(),
     *_shared_processors,
 ]
-if is_remote_environment():
+if REMOTE_ENVIRONMENT:
     # Transform keys and values to work with Google Cloud Logging
     _structlog_processors.append(structlog.processors.format_exc_info)
 # Wrap for builtin logging as very last processor
