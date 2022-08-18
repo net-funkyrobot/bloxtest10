@@ -9,6 +9,7 @@ urlpatterns = [
         views.debug_raise_exception,
         name="debug_raise_exception",
     ),
-    path("login_redirect/", views.login_redirect, name="gae_login_redirect"),
-    path("switch_accounts/", views.switch_accounts, name="gae_switch_accounts"),
+    path("login-redirect/", views.login_redirect, name="gae_login_redirect"),
+    path("switch-accounts/", views.switch_accounts, name="gae_switch_accounts"),
+    path("deferred/", views.deferred_handler, name="tasks_deferred_handler"),
 ]

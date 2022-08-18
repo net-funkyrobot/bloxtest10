@@ -101,6 +101,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "backend.core.middleware.TaskEnvironmentMiddleware",
 ]
 
 # If we're connecting to production locally use the Django auth middleware,
