@@ -15,3 +15,4 @@
 manage.py
 requirements-dev.txt
 .env
+.env-dist
