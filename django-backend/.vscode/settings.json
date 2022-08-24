@@ -6,10 +6,9 @@
     "Mailchimp"
   ],
   "files.associations": {
-    ".envrc": "shellscript",
-    ".secrets": "shellscript",
-    ".secrets-dist": "shellscript",
-    ".gcloudignore": "shellscript"
+    ".env": "shellscript",
+    ".env-dist": "shellscript",
+    ".gcloudignore": "shellscript",
   },
   "python.linting.mypyEnabled": true,
   "python.formatting.provider": "black",

@@ -1,14 +1,16 @@
-import os
-
 import structlog
+from django.dispatch import receiver
 from django_structlog.processors import inject_context_dict
+from django_structlog.signals import bind_extra_request_metadata
 
-from backend.settings import *  # noqa: F401, F403
-from backend.settings import BASE_DIR
+from .settings import *  # noqa: F401, F403
+from .settings import GOOGLE_CLOUD_PROJECT, env
 
 # CORE
 
-DEBUG = True
+# SECURITY WARNING: don't run with debug turned on in production!
+# Change this to 'False' when you are ready for production
+DEBUG = False
 
 MIDDLEWARE = [
     "django_structlog.middlewares.RequestMiddleware",
@@ -18,38 +20,50 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Standard Django auth middleware used here
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "backend.core.middleware.GaeAuthenticationMiddleware",
 ]
 
-# Use a local SQLlite database like settings_test but specify a different
-# sqlite file
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
-    }
-}
 
 # INTEGRATIONS
 
-# Set MAILERLITE_GROUP to "testing" so test contacts don't pollute the mailing list
-MAILERLITE_GROUP = "testing"
+# Mailerlite API
+MAILERLITE_API_TOKEN = env("MAILERLITE_API_TOKEN")
+MAILERLITE_GROUP = "bloxtest10"  # TODO: template here
 
 
 # LOGGING
+
+
+def _transform_for_gcloud_logging(logger, log_method, event_dict):
+    # Rename 'event' to 'message'
+    event_dict["message"] = event_dict.get("event")
+    del event_dict["event"]
+
+    # Rename 'level' to 'severity'
+    event_dict["severity"] = event_dict.get("level")
+    del event_dict["level"]
+
+    # Map severity levels to GCloud versions and make uppercase
+    if event_dict["severity"].lower() == "notset":
+        event_dict["severity"] = "debug"
+    event_dict["severity"] = event_dict["severity"].upper()
+
+    return event_dict
+
 
 _shared_processors = [
     structlog.stdlib.add_log_level,
     structlog.stdlib.add_logger_name,
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.stdlib.PositionalArgumentsFormatter(),
+    # Transform keys and values to work with Google Cloud Logging
+    _transform_for_gcloud_logging,
 ]
 
 _builtin_processors = [
     structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-    # Use console renderer for local development
-    structlog.dev.ConsoleRenderer(colors=True),
+    # Use JSON formatting on remote as opposed to console rendering
+    structlog.processors.JSONRenderer(),
 ]
 
 _builtin_pre_chain = [inject_context_dict, *_shared_processors]
@@ -59,6 +73,8 @@ _structlog_processors = [
     structlog.processors.StackInfoRenderer(),
     structlog.processors.UnicodeDecoder(),
     *_shared_processors,
+    # Transform keys and values to work with Google Cloud Logging
+    structlog.processors.format_exc_info,
     # Wrap for builtin logging as very last processor
     structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
 ]
@@ -94,3 +110,20 @@ structlog.configure(
     wrapper_class=structlog.stdlib.BoundLogger,
     cache_logger_on_first_use=True,
 )
+
+
+@receiver(bind_extra_request_metadata)
+def bind_appengine_trace_context_id(request, logger, **kwargs):
+    trace_header = request.headers.get("X-Cloud-Trace-Context", None)
+
+    project_id = GOOGLE_CLOUD_PROJECT
+
+    if project_id and trace_header:
+        logger.bind(
+            **{
+                "logging.googleapis.com/trace": "projects/{0}/traces/{1}".format(
+                    project_id,
+                    trace_header.split("/")[0],
+                ),
+            },
+        )

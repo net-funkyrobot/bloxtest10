@@ -21,7 +21,7 @@ python-dependencies:
 	@touch $@
 
 firebase-admin-service-account.json:
-	gcloud secrets versions access latest --secret firebase_admin_service_account_key > firebase-admin-service-account.json
+	gcloud secrets versions access latest --secret firebase_admin_service_account_key > firebase-admin-service-account.json  --project=net-startupworx-bloxtest10
 
 .stamps/codebase-setup.done: | .stamps/gcloud-cloud-sql-proxy.installed firebase-admin-service-account.json
 	@touch $@
@@ -66,12 +66,16 @@ prepare: | .stamps/codebase-setup.done
 	gcloud secrets add-iam-policy-binding backend_settings --member serviceAccount:net-startupworx-bloxtest10@appspot.gserviceaccount.com --role roles/secretmanager.secretAccessor --project net-startupworx-bloxtest10 --quiet
 	@touch $@
 
+.stamps/gcloud-container-registry-service.enabled.perm: | .stamps
+	gcloud services enable containerregistry.googleapis.com --project=net-startupworx-bloxtest10 --quiet
+	@touch $@
+
 .stamps/gcloud-firebase-admin-service-account-key.created.perm: | .stamps
 	gcloud iam service-accounts keys create firebase-admin-service-account.json --iam-account=firebase-adminsdk-9og4c@net-startupworx-bloxtest10.iam.gserviceaccount.com --quiet --project net-startupworx-bloxtest10
 	gcloud secrets create firebase_admin_service_account_key --data-file firebase-admin-service-account.json --project net-startupworx-bloxtest10 --quiet
 	@touch $@
 
-.stamps/infrastructure-setup.done: | .stamps .stamps/gcloud-apis.enabled.perm .stamps/gcloud-cloud-sql-database-user.created.perm .stamps/gcloud-secrets.created.perm .stamps/gcloud-firebase-admin-service-account-key.created.perm
+.stamps/infrastructure-setup.done: | .stamps .stamps/gcloud-apis.enabled.perm .stamps/gcloud-cloud-sql-database-user.created.perm .stamps/gcloud-secrets.created.perm .stamps/gcloud-firebase-admin-service-account-key.created.perm .stamps/gcloud-container-registry-service.enabled.perm
 	@touch $@
 
 .PHONY: | infrastructure
@@ -84,13 +88,20 @@ infrastructure: | .stamps/infrastructure-setup.done
 .PHONY: | secrets
 secrets:
 	echo "Getting latest environment settings and secrets from Google Cloud Secret Manager"
-	gcloud secrets versions access latest --secret backend_settings > .secrets
+	gcloud secrets versions access latest --secret backend_settings > .env --project=net-startupworx-bloxtest10
 
 .PHONY: | deploy-secrets
 deploy-secrets:
-	gcloud secrets versions add backend_settings --data-file .secrets
+	gcloud secrets versions add backend_settings --data-file .env --project=net-startupworx-bloxtest10
 
 # Run Django devserver via Cloud SQL proxy
 .PHONY: | dev
 dev: | .stamps/codebase-setup.done python-dependencies
 	itermocil --here
+
+
+# DEPLOYMENT
+
+.PHONY: | deploy
+deploy:
+	gcloud app deploy --project=net-startupworx-bloxtest10

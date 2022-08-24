@@ -3,7 +3,7 @@
 import os
 
 from backend.settings import BASE_DIR
-from backend.settings_staging import *  # noqa: F401, F403
+from backend.settings_dev import *  # noqa: F401, F403
 
 # Use a local SQLlite database
 DATABASES = {
