@@ -10,11 +10,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # On AppEngine this env variable should be set, locally this should be set in .envrc
 GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT")
-if not GOOGLE_CLOUD_PROJECT:
-    raise Exception("No GOOGLE_CLOUD_PROJECT env var detected. Cannot continue.")
-
-
-REMOTE_ENVIRONMENT = "GAE_ENV" in os.environ and os.environ["GAE_ENV"] == "standard"
 
 
 def get_secrets() -> environ.Env:
@@ -55,6 +50,9 @@ def get_secrets() -> environ.Env:
 
 
 env = get_secrets()
+
+
+REMOTE_ENVIRONMENT = "GAE_ENV" in os.environ and os.environ["GAE_ENV"] == "standard"
 
 SECRET_KEY = env("SECRET_KEY")
 

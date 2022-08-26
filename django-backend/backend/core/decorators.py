@@ -2,7 +2,7 @@ from functools import wraps
 
 from django.http import HttpResponseForbidden
 
-from .environment import is_in_task, is_in_cron
+from .environment import is_in_cron, is_in_task
 
 
 def task_only(view_function):
