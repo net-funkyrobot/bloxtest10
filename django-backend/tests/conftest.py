@@ -1,6 +1,16 @@
+# from subprocess import Popen
+
 import pytest
 
+from backend.core.tasks_emulator import patch_tasks_emulator
 from tests import factories
+
+
+@pytest.fixture(scope="session", autouse=True)
+def tasks_emulator(request):
+    # Patch the tasks module to use a local, in-process Cloud Tasks emulator in
+    # development
+    patch_tasks_emulator()
 
 
 @pytest.fixture

@@ -9,7 +9,7 @@ from ..decorators import task_only
 @csrf_exempt
 @task_only
 def deferred_handler(request):
-    callback, args, kwargs = pickle.loads(request.body)
-    callback(*args, **kwargs)
+    service_obj = pickle.loads(request.body)
+    service_obj.run()
 
     return HttpResponse("OK")

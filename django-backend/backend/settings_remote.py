@@ -21,6 +21,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "backend.core.middleware.GaeAuthenticationMiddleware",
+    "backend.core.middleware.TaskEnvironmentMiddleware",
 ]
 
 

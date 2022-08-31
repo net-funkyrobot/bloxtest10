@@ -1,69 +1,27 @@
 import functools
-import os
 import pickle
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Optional
 from urllib.parse import unquote
 
-import grpc
 import structlog
-from django.conf import settings
 from django.db import connections
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_str
 from google.api_core import exceptions
 from google.cloud import tasks_v2
 from google.protobuf.timestamp_pb2 import Timestamp
-from pydantic import BaseModel, conint, validator
 
-from .environment import gae_version, tasks_location
-from .models import LargeDeferredTask
+from .environment import google_cloud_project, tasks_location
+from .schema import TaskOptions
 
-logger = structlog.get_logger(__name__)
+_logger = structlog.get_logger(__name__)
 
-_DEFAULT_QUEUE = "default"
-_DEFAULT_URL = reverse_lazy("tasks_deferred_handler")
+
 _TASKQUEUE_HEADERS = {"Content-Type": "application/octet-stream"}
-_CLOUD_TASKS_PROJECT = settings.GOOGLE_CLOUD_PROJECT
+_CLOUD_TASKS_PROJECT = google_cloud_project()
 _CLOUD_TASKS_LOCATION = tasks_location()
-
-
-def get_cloud_tasks_client():
-    """Get an instance of a Google CloudTasksClient."""
-
-    if settings.REMOTE_ENVIRONMENT:
-        return tasks_v2.CloudTasksClient()
-    else:
-        # Running locally, try to connect to the emulator
-        from google.api_core.client_options import ClientOptions
-        from google.cloud.tasks_v2.services.cloud_tasks.transports.grpc import (
-            CloudTasksGrpcTransport,
-        )
-
-        host = os.environ.get("TASKS_EMULATOR_HOST", "127.0.0.1:9022")
-
-        client = tasks_v2.CloudTasksClient(
-            transport=CloudTasksGrpcTransport(channel=grpc.insecure_channel(host)),
-            client_options=ClientOptions(api_endpoint=host),
-        )
-        return client
-
-
-def cloud_tasks_parent_path():
-    location_id = _CLOUD_TASKS_LOCATION
-    project_id = _CLOUD_TASKS_PROJECT
-
-    assert project_id
-    assert location_id
-
-    return "projects/{0}/locations/{1}".format(project_id, location_id)
-
-
-def cloud_tasks_queue_path(queue_name):
-    """Return the full path to a Cloud Tasks queue."""
-    return "{0}/queues/{1}".format(cloud_tasks_parent_path(), queue_name)
 
 
 class TaskError(Exception):
@@ -72,41 +30,6 @@ class TaskError(Exception):
 
 class PermanentTaskError(TaskError):
     """Indicates that a task failed, and will never succeed."""
-
-
-class SingularTaskError(TaskError):
-    """Indicates that a task failed once."""
-
-
-class RoutingOptions(BaseModel):
-    version: str = gae_version()
-    serivce: Optional[str]
-    instance: Optional[str]
-
-
-class TaskOptions(BaseModel):
-    name: Optional[str]
-    created_at: Optional[datetime]
-    small_task: bool = False
-    using: str = "default"
-    transactional: bool = False  # TODO: Should this be False by default?
-    countdown: Optional[conint(gt=0)]
-    eta: Optional[datetime]
-    routing: RoutingOptions = RoutingOptions()
-    handler_url: str = unquote(force_str(_DEFAULT_URL))
-    extra_task_headers: dict = {}
-    queue: str = _DEFAULT_QUEUE
-
-    @validator("using")
-    def using_has_valid_connection_name(cls, v):
-        if v not in connections:
-            raise ValueError(
-                "'using' not a valid DB connection in {0}".format(
-                    ",".join(connections.keys()),
-                )
-            )
-
-        return v
 
 
 def _run_from_database(deferred_task_id):
@@ -120,6 +43,9 @@ def _run_from_database(deferred_task_id):
             raise PermanentTaskError(e)
         else:
             return service_instance.run()
+
+    # Inline import to support importing this module before Django is initialized
+    from .models import LargeDeferredTask
 
     entity = LargeDeferredTask.objects.filter(pk=deferred_task_id).first()
     if not entity:
@@ -154,16 +80,12 @@ def _get_task_name(obj: Any, task_created_at: datetime) -> str:
 
 
 def _schedule_task(pickled_data: bytes, task_options: TaskOptions):
-    client = get_cloud_tasks_client()
+    client = tasks_v2.CloudTasksClient()
     deferred_task = None
-
-    # Use a db entity unless this has been explicitly marked as a small task
-    if not task_options.small_task:
-        deferred_task = LargeDeferredTask.objects.create(data=pickled_data)
 
     path = client.queue_path(
         _CLOUD_TASKS_PROJECT,
-        _CLOUD_TASKS_PROJECT,
+        _CLOUD_TASKS_LOCATION,
         task_options.queue,
     )
 
@@ -185,15 +107,17 @@ def _schedule_task(pickled_data: bytes, task_options: TaskOptions):
     created_at_ts.FromDatetime(task_options.created_at)
 
     task = {
-        "name": task_options.name,
+        "name": "{0}/tasks/{1}".format(path, task_options.name),
         "create_time": created_at_ts,
         "schedule_time": schedule_time,
         "app_engine_http_request": {  # Specify the type of request.
             "http_method": "POST",
-            "relative_uri": task_options.handler_url,
+            "relative_uri": unquote(reverse(task_options.handler_url)),
             "body": pickled_data,
             "headers": task_headers,
-            "app_engine_routing": task_options.routing,
+            "app_engine_routing": task_options.routing.dict()
+            if task_options.routing
+            else None,
         },
     }
 
@@ -211,6 +135,10 @@ def _schedule_task(pickled_data: bytes, task_options: TaskOptions):
         # Create a db entity unless this has been explicitly marked as a small task
         if task_options.small_task:
             raise
+
+        # Inline import to support importing this module before Django is initialized
+        from .models import LargeDeferredTask
+
         deferred_task = LargeDeferredTask.objects.create(data=pickled_data)
 
         # Replace the task body with one containing a function to run the

@@ -5,6 +5,10 @@ from typing import Optional
 _TASK_ENV = threading.local()
 
 
+def google_cloud_project() -> Optional[str]:
+    return os.environ.get("GOOGLE_CLOUD_PROJECT")
+
+
 def application_id(default="e~example") -> str:
     # Fallback to example on local or if this is not specified in the
     # environment already

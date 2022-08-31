@@ -20,6 +20,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Standard Django auth middleware used here
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "backend.core.middleware.TaskEnvironmentMiddleware",
 ]
 
 # Use a local SQLlite database like settings_test but specify a different

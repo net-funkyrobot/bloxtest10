@@ -12,6 +12,13 @@ def main():
         ImportError: If PYTHONPATH is broken
     """
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings_dev")
+
+    from backend.core.tasks_emulator import patch_tasks_emulator
+
+    # Patch the tasks module to use a local, in-process Cloud Tasks emulator in
+    # development
+    patch_tasks_emulator()
+
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
