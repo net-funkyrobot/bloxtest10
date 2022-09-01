@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional
 import jsonpickle
 from structlog.stdlib import get_logger
 
-from backend.core.schema import TaskOptions
+from .task_options import TaskOptions
 
 _logger = get_logger(__name__)
 

@@ -7,16 +7,16 @@ from google.auth.transport import requests
 from google.oauth2 import id_token
 from structlog.stdlib import get_logger
 
-from ..models.auth import GaeAbstractBaseUser, UserManager
+from ..models.auth import AbstractIapAdminUser, UserManager
 
 _GOOG_AUTHENTICATED_USER_ID_HEADER = "HTTP_X_GOOG_AUTHENTICATED_USER_ID"
 _GOOG_AUTHENTICATED_USER_EMAIL_HEADER = "HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL"
 _GOOG_JWT_ASSERTION_HEADER = "HTTP_X_GOOG_IAP_JWT_ASSERTION"
-_IAP_AUDIENCE = "GOOGLEAUTH_IAP_JWT_AUDIENCE"
+_IAP_AUDIENCE = "/projects/440894321495/apps/net-startupworx-bloxtest10"
 
 User = get_user_model()
 
-if not issubclass(User, GaeAbstractBaseUser):
+if not issubclass(User, AbstractIapAdminUser):
     raise ImproperlyConfigured(
         "IAPAdminBackend requires AUTH_USER_MODEL to be a "
         " subclass of backend.core.models.auth.AbstractIapAdminUser."

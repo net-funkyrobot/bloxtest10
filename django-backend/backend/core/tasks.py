@@ -14,7 +14,7 @@ from google.cloud import tasks_v2
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from .environment import google_cloud_project, tasks_location
-from .schema import TaskOptions
+from .task_options import TaskOptions
 
 _logger = structlog.get_logger(__name__)
 
