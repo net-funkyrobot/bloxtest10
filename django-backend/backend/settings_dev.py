@@ -10,19 +10,6 @@ from backend.settings import BASE_DIR
 
 DEBUG = True
 
-MIDDLEWARE = [
-    "django_structlog.middlewares.RequestMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Standard Django auth middleware used here
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "backend.core.middleware.TaskEnvironmentMiddleware",
-]
-
 # Use a local SQLlite database like settings_test but specify a different
 # sqlite file
 DATABASES = {

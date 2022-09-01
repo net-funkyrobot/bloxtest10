@@ -36,20 +36,26 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra_fields)
 
 
-class GaeAbstractBaseUser(AbstractBaseUser):
-    """Abstract model which works with the AppEngine users API."""
+class AbstractIapAdminUser(AbstractBaseUser):
+    """Abstract User model for admin users which works with the Google IAP
+    environment."""
 
     email = models.EmailField(_("email address"), unique=True)
 
-    google_user_id = models.CharField(
-        # This stores the AppEngine Users API user ID. We allow it to be null
-        # so that Google-based users can be pre-created before they log in and
-        # they can use passwords locally.
-        _("Google user ID"),
-        max_length=21,
+    # This stores the IAP user ID. We allow it to be null so that users can be
+    # pre-created before they log in and they can use passwords locally.
+    google_iap_id = models.CharField(
+        _("Google IAP user ID"),
+        max_length=150,
         unique=True,
         default=None,
         null=True,
+        blank=True,
+    )
+
+    google_iap_namespace = models.CharField(
+        max_length=64,
+        default="",
         blank=True,
     )
 
@@ -98,5 +104,5 @@ class GaeAbstractBaseUser(AbstractBaseUser):
         super().save(*args, **kwargs)
 
 
-class BackendUser(GaeAbstractBaseUser, PermissionsMixin):
+class AdminUser(AbstractIapAdminUser, PermissionsMixin):
     pass

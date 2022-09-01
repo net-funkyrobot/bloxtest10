@@ -87,6 +87,19 @@ INSTALLED_APPS = [
     "backend.core",
 ]
 
+MIDDLEWARE = [
+    "django_structlog.middlewares.RequestMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "backend.core.middleware.IapAdminAuthenticationMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "backend.core.middleware.TaskEnvironmentMiddleware",
+]
+
 ROOT_URLCONF = "backend.urls"
 
 TEMPLATES = [
@@ -133,11 +146,11 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Use specialised Django User model that integrates with the AppEngine User API
-AUTH_USER_MODEL = "core.BackendUser"
+AUTH_USER_MODEL = "core.AdminUser"
 
 # Custom auth backend that utilises AppEngine's User API
 AUTHENTICATION_BACKENDS = [
-    "backend.core.backends.AppEngineUserAPIBackend",
+    "backend.core.backends.IapAdminBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 

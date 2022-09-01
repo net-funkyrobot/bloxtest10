@@ -1,79 +1,42 @@
-from django.contrib.auth import (
-    BACKEND_SESSION_KEY,
-    authenticate,
-    get_user,
-    load_backend,
-    login,
-    logout,
-)
-from django.contrib.auth.middleware import AuthenticationMiddleware as DjangoMiddleware
-from django.contrib.auth.models import AnonymousUser, BaseUserManager
-from google.appengine.api import users
+from django.contrib.auth import BACKEND_SESSION_KEY, authenticate, load_backend, login
+from django.contrib.auth.middleware import get_user
+from django.contrib.auth.models import AnonymousUser
 
-from backend.core.backends import AppEngineUserAPIBackend
+from backend.core.backends import IapAdminBackend
 
 
-class GaeAuthenticationMiddleware(DjangoMiddleware):
-    def process_request(self, request):
-        django_user = get_user(request)
-        google_user = users.get_current_user()
+def _iap_admin_authentication_middleware(get_response):
+    def middleware(request):
+        assert hasattr(request, "session"), (
+            "The Django authentication middleware requires session middleware "
+            "to be installed. Edit your MIDDLEWARE setting to insert "
+            "'django.contrib.sessions.middleware.SessionMiddleware' before "
+            "'backend.core.middleware.IapAdminAuthenticationMiddleware'."
+        )
+
+        user = get_user(request)
 
         # Check to see if the user is authenticated with a different backend,
         # if so, just set request.user and bail
-        if django_user.is_authenticated:
+        if user.is_authenticated:
             backend_str = request.session.get(BACKEND_SESSION_KEY)
             if (not backend_str) or not isinstance(
-                load_backend(backend_str), AppEngineUserAPIBackend
+                load_backend(backend_str), IapAdminBackend
             ):
-                request.user = django_user
+                request.user = user
                 return
 
-        if django_user.is_anonymous and google_user:
-            # If there is a google user, but we are anonymous, log in!
-            # Note that a Django user must already exist or have been
-            # pre-created for this google user.
-            django_user = (
-                authenticate(request, google_user=google_user) or AnonymousUser()
-            )
-            if django_user.is_authenticated:
-                login(request, django_user)
+        # If we can authenticate, but we are anonymous, log in!
+        if user.is_anonymous and IapAdminBackend.can_authenticate(request):
+            user = authenticate(request) or AnonymousUser()
+            if user.is_authenticated:
+                login(request, user)
 
-        if django_user.is_authenticated:
-            if not google_user:
-                # If we are logged in with django, but no longer logged in
-                # with Google then log out
-                logout(request)
-                django_user = AnonymousUser()
-            elif django_user.google_user_id != google_user.user_id():
-                # If the Google user changed, we need to log in with the new one
-                logout(request)
-                django_user = authenticate(google_user=google_user) or AnonymousUser()
-                if django_user.is_authenticated:
-                    login(request, django_user)
+        request.user = user
 
-        # Note that the logic above may have logged us out, hence new `if` statement
-        if django_user.is_authenticated:
-            self.sync_user_data(django_user, google_user)
+        return get_response(request)
 
-        request.user = django_user
+    return middleware
 
-    def sync_user_data(self, django_user, google_user):
-        # Now make sure we update is_superuser and is_staff appropriately
-        changed_fields = []
 
-        is_superuser = users.is_current_user_admin()
-
-        if is_superuser != django_user.is_superuser:
-            django_user.is_superuser = django_user.is_staff = is_superuser
-            changed_fields += ["is_superuser", "is_staff"]
-
-        email = BaseUserManager.normalize_email(
-            google_user.email()
-        )  # Normalizes the domain only.
-
-        if email != django_user.email:
-            django_user.email = email
-            changed_fields += ["email", "email_lower"]
-
-        if changed_fields:
-            django_user.save(update_fields=changed_fields)
+IapAdminAuthenticationMiddleware = _iap_admin_authentication_middleware

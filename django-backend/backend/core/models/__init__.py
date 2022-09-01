@@ -1,11 +1,11 @@
-from .auth import BackendUser, GaeAbstractBaseUser, UserManager
+from .auth import AbstractIapAdminUser, AdminUser, UserManager
 from .base import TimestampsMixin
 from .mobile_app_user import MobileAppUser
 from .tasks import LargeDeferredTask
 
 __all__ = [
-    BackendUser,
-    GaeAbstractBaseUser,
+    AdminUser,
+    AbstractIapAdminUser,
     LargeDeferredTask,
     MobileAppUser,
     TimestampsMixin,

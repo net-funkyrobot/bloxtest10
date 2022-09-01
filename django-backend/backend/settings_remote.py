@@ -12,19 +12,6 @@ from .settings import GOOGLE_CLOUD_PROJECT, env
 # Change this to 'False' when you are ready for production
 DEBUG = False
 
-MIDDLEWARE = [
-    "django_structlog.middlewares.RequestMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "backend.core.middleware.GaeAuthenticationMiddleware",
-    "backend.core.middleware.TaskEnvironmentMiddleware",
-]
-
-
 # INTEGRATIONS
 
 # Mailerlite API

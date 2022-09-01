@@ -1,7 +1,7 @@
-from .auth import GaeAuthenticationMiddleware
+from .auth import IapAdminAuthenticationMiddleware
 from .tasks import TaskEnvironmentMiddleware
 
 __all__ = [
-    GaeAuthenticationMiddleware,
+    IapAdminAuthenticationMiddleware,
     TaskEnvironmentMiddleware,
 ]
